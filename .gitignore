@@ -34,3 +34,5 @@ Thumbs.db
 # Python virtual envs
 venv/
 env/
+
+.vercel
