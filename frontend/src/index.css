@@ -1,0 +1,100 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:    #080f1e;
+  --navy2:   #0d1829;
+  --navy3:   #111f34;
+  --navy4:   #172540;
+  --teal:    #1de9b6;
+  --teal2:   #00c896;
+  --teal3:   #0f6e56;
+  --amber:   #f59e0b;
+  --orange:  #f97316;
+  --red:     #ef4444;
+  --blue:    #3b82f6;
+  --purple:  #a855f7;
+  --muted:   #8899aa;
+  --border:  #1a2d4a;
+  --border2: #203558;
+  --text:    #e4ecf8;
+  --text2:   #b0c0d4;
+  --text3:   #647a94;
+  --card-bg: rgba(13, 24, 41, 0.8);
+  --glow-teal: 0 0 20px rgba(29,233,182,0.15);
+}
+
+body {
+  background: var(--navy);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(ellipse 100% 60% at 50% -10%, rgba(29,233,182,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(59,130,246,0.04) 0%, transparent 50%);
+}
+
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--navy2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2d4a72; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+@keyframes pulseScale {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.15); opacity: 0.6; }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes spinGlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes barFill {
+  from { width: 0; }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-fade { animation: fadeIn 0.3s ease forwards; }
+
+/* Card utility */
+.glass-card {
+  background: rgba(13, 24, 41, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 48, 80, 0.7);
+  border-radius: 14px;
+}
+
+/* Glow text */
+.glow-teal {
+  color: var(--teal);
+  text-shadow: 0 0 20px rgba(29,233,182,0.4);
+}
