@@ -55,21 +55,16 @@ Visit: http://localhost:5173
 
 ## Deployment
 
-### Backend → Railway
+### Unified Vercel Deployment
 
-1. Create account at railway.app
-2. Connect your GitHub repo
-3. Railway auto-detects backend/Dockerfile
-4. Set environment variables if needed
-5. Your backend URL will be https://sentinel-ai-backend.railway.app
+This project is built to deploy entirely on **Vercel** as a single monolithic app. The frontend is hosted as a static Vite site, and the FastAPI backend runs on Vercel Serverless Functions (Python).
 
-### Frontend → Vercel
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Import your GitHub repository.
+3. Ensure the **Root Directory** is set to `frontend` (where the `vercel.json` is located).
+4. Deploy! Vercel will automatically build the React frontend and configure the FastAPI backend in `api/index.py`.
 
-1. Create account at vercel.com
-2. Import your GitHub repo, set Root Directory to frontend
-3. Vercel auto-detects Vite
-4. Update vercel.json - change the destination URL to your Railway backend URL
-5. Deploy!
+*No separate backend hosting (like Railway) is required.*
 
 ---
 
