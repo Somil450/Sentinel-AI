@@ -42,6 +42,13 @@ input, select, textarea { font-family: inherit; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #2d4a72; }
 
+/* Custom Sleek Scrollbar for internal panels */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; border-radius: 8px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(29, 233, 182, 0.2); border-radius: 8px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(29, 233, 182, 0.4); }
+.custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(29, 233, 182, 0.2) transparent; }
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.25; }

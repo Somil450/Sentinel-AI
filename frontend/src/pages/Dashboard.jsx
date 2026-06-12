@@ -204,14 +204,16 @@ export default function Dashboard() {
         <div style={{ ...rowStyle, background: 'var(--navy3)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.8px', color: 'var(--text3)' }}>
           <span>Signal</span><span>Confidence</span><span>Sources</span><span>Reports</span><span>Status</span>
         </div>
-        {signals.length === 0 ? (
-          <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
-            <i className="ti ti-radar" style={{ fontSize: 28, color: 'var(--teal)', display: 'block', marginBottom: 10, opacity: 0.5 }} />
-            No signals yet. Submit the first report to start the engine.
-          </div>
-        ) : (
-          signals.map(sig => <SignalRow key={sig.id} sig={sig} />)
-        )}
+        <div className="custom-scrollbar" style={{ maxHeight: '380px', overflowY: 'auto' }}>
+          {signals.length === 0 ? (
+            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+              <i className="ti ti-radar" style={{ fontSize: 28, color: 'var(--teal)', display: 'block', marginBottom: 10, opacity: 0.5 }} />
+              No signals yet. Submit the first report to start the engine.
+            </div>
+          ) : (
+            signals.map(sig => <SignalRow key={sig.id} sig={sig} />)
+          )}
+        </div>
       </div>
 
       {/* Charts */}
@@ -297,23 +299,25 @@ export default function Dashboard() {
           </span>
           <span style={{ fontSize: 11, color: 'var(--text3)' }}>Auto-refreshes every 8s</span>
         </div>
-        {recent.length === 0 ? (
-          <div style={{ padding: '24px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
-            No reports yet.
-          </div>
-        ) : (
-          recent.map((r, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: '1px solid var(--border)', fontSize: 12, transition: 'background .15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--navy3)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <span style={{ color: 'var(--teal3)', fontFamily: 'monospace', fontSize: 10, minWidth: 70, fontWeight: 600 }}>#{r.anon_id.slice(0,8)}</span>
-              <span style={{ color: 'var(--text2)', minWidth: 120, fontWeight: 500, fontSize: 12 }}>{r.district}</span>
-              <span style={{ color: 'var(--text3)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.symptoms.join(', ')}</span>
-              <span style={{ color: 'var(--text3)', fontSize: 11, fontFamily: 'monospace' }}>{new Date(r.timestamp).toLocaleTimeString()}</span>
+        <div className="custom-scrollbar" style={{ maxHeight: '280px', overflowY: 'auto' }}>
+          {recent.length === 0 ? (
+            <div style={{ padding: '24px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+              No reports yet.
             </div>
-          ))
-        )}
+          ) : (
+            recent.map((r, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: '1px solid var(--border)', fontSize: 12, transition: 'background .15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--navy3)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <span style={{ color: 'var(--teal3)', fontFamily: 'monospace', fontSize: 10, minWidth: 70, fontWeight: 600 }}>#{r.anon_id.slice(0,8)}</span>
+                <span style={{ color: 'var(--text2)', minWidth: 120, fontWeight: 500, fontSize: 12 }}>{r.district}</span>
+                <span style={{ color: 'var(--text3)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.symptoms.join(', ')}</span>
+                <span style={{ color: 'var(--text3)', fontSize: 11, fontFamily: 'monospace' }}>{new Date(r.timestamp).toLocaleTimeString()}</span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   )
