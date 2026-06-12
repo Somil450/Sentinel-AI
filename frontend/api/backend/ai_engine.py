@@ -225,7 +225,27 @@ class ConfidenceEngine:
         top_symptoms = [s for s, _ in sym_counter.most_common(4)]
 
         # ── DETERMINE SOURCES ─────────────────────────────────────────────
-        sources = ["user reports"]
+        # Count real external data source tags in the reports
+        real_source_tags = set()
+        for r in genuine:
+            anon = r.get("anon_id", "")
+            src  = r.get("source", "")
+            if anon.startswith("REAL-WHO") or src == "WHO":
+                real_source_tags.add("WHO Disease Outbreak News")
+            elif anon.startswith("REAL-PROMED") or src == "ProMED":
+                real_source_tags.add("ProMED Mail")
+            elif anon.startswith("REAL-DISEAS") or src == "disease.sh":
+                real_source_tags.add("disease.sh (COVID-19)")
+            elif anon.startswith("REAL-GDELT") or src == "GDELT":
+                real_source_tags.add("GDELT health events")
+            elif anon.startswith("REAL-NCVBDC") or src == "NCVBDC":
+                real_source_tags.add("NCVBDC / MoHFW")
+            elif anon.startswith("REAL-NEWSDA") or src == "NewsData":
+                real_source_tags.add("NewsData.io")
+
+        sources = list(real_source_tags)
+        if not sources:
+            sources = ["user reports"]
         if trends_score > 40:
             sources.append("trend signals")
         if idsp_anchor > 0:
@@ -234,7 +254,8 @@ class ConfidenceEngine:
             sources.append("geo clustering")
 
         # ── ENFORCE 2-SOURCE MINIMUM (Convergence Rule) ────────────────
-        # Signal is only created/updated if we have ≥2 independent data sources
+        # Real external sources (WHO/ProMED/disease.sh) each count as one source.
+        # User-only reports still need a 2nd source (trends or IDSP).
         if len(sources) < 2:
             return  # Not enough convergence yet
 
@@ -306,7 +327,24 @@ class ConfidenceEngine:
         sym_counter = Counter(all_symptoms)
         top_symptoms = [s for s, _ in sym_counter.most_common(4)]
 
-        sources = ["user reports"]
+        sources = []
+        real_source_tags = set()
+        for r in genuine:
+            anon = r.get("anon_id", "")
+            src  = r.get("source", "")
+            if anon.startswith("REAL-WHO") or src == "WHO":
+                real_source_tags.add("WHO Disease Outbreak News")
+            elif anon.startswith("REAL-PROMED") or src == "ProMED":
+                real_source_tags.add("ProMED Mail")
+            elif anon.startswith("REAL-DISEAS") or src == "disease.sh":
+                real_source_tags.add("disease.sh")
+            elif anon.startswith("REAL-GDELT") or src == "GDELT":
+                real_source_tags.add("GDELT")
+            elif anon.startswith("REAL-NCVBDC") or src == "NCVBDC":
+                real_source_tags.add("NCVBDC")
+            elif anon.startswith("REAL-NEWSDA") or src == "NewsData":
+                real_source_tags.add("NewsData")
+        sources = list(real_source_tags) if real_source_tags else ["user reports"]
         if trends_score > 40: sources.append("trend signals")
         if len(genuine) > 10: sources.append("geo clustering")
 
