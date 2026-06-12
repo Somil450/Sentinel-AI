@@ -48,4 +48,14 @@ export const api = {
   /** Get WHO/IDSP ground truth data */
   getGroundTruth: (district = null) =>
     apiFetch('/groundtruth' + (district ? `?district=${encodeURIComponent(district)}` : '')),
+
+  /**
+   * Diagnose Me — POST symptoms + district.
+   * Returns ranked disease list with probabilities grounded in live outbreak data.
+   */
+  diagnose: (district, symptoms, freeText = '') =>
+    apiFetch('/diagnose', {
+      method: 'POST',
+      body: JSON.stringify({ district, symptoms, free_text: freeText }),
+    }),
 }

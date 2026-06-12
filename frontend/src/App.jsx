@@ -4,14 +4,16 @@ import Heatmap from './pages/Heatmap'
 import ReportForm from './pages/ReportForm'
 import Predictions from './pages/Predictions'
 import Intelligence from './pages/Intelligence'
+import DiagnoseMe from './pages/DiagnoseMe'
 import styles from './App.module.css'
 
 const TABS = [
-  { id: 'dashboard',    icon: 'ti-chart-bar',   label: 'Signal Feed'   },
-  { id: 'predictions',  icon: 'ti-brain',        label: 'Forecast'      },
-  { id: 'heatmap',      icon: 'ti-map',          label: 'Heatmap'       },
-  { id: 'intelligence', icon: 'ti-database',     label: 'Intelligence'  },
-  { id: 'report',       icon: 'ti-file-plus',    label: 'Report'        },
+  { id: 'dashboard',    icon: 'ti-chart-bar',    label: 'Signal Feed'   },
+  { id: 'predictions',  icon: 'ti-brain',         label: 'Forecast'      },
+  { id: 'heatmap',      icon: 'ti-map',           label: 'Heatmap'       },
+  { id: 'intelligence', icon: 'ti-database',      label: 'Intelligence'  },
+  { id: 'diagnose',     icon: 'ti-stethoscope',   label: 'Diagnose Me'   },
+  { id: 'report',       icon: 'ti-file-plus',     label: 'Report'        },
 ]
 
 export default function App() {
@@ -57,6 +59,7 @@ export default function App() {
         {page === 'predictions'  && <Predictions />}
         {page === 'heatmap'      && <Heatmap />}
         {page === 'intelligence' && <Intelligence />}
+        {page === 'diagnose'     && <DiagnoseMe />}
         {page === 'report'       && <ReportForm />}
       </main>
     </div>

@@ -20,6 +20,7 @@ from trends_fetcher import get_trends_score, get_trends_raw
 from idsp_loader import get_idsp_summary, get_district_idsp, get_anchor_score
 from prediction_engine import prediction_engine
 from real_data_fetcher import get_real_data_summary, fetch_all_real_data
+from diagnosis_engine import diagnosis_engine
 
 app = FastAPI(title="Sentinel AI API", version="2.0.0")
 
@@ -86,6 +87,11 @@ class HeatmapPoint(BaseModel):
     confidence: float
     report_count: int
     dominant_symptom: str
+
+class DiagnoseIn(BaseModel):
+    district: str
+    symptoms: List[str]
+    free_text: Optional[str] = ""
 
 # ── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -294,6 +300,29 @@ def refresh_data():
         return {"status": "ok", "new_reports": len(new_reports)}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
+
+
+@app.post("/api/diagnose")
+def diagnose(report: DiagnoseIn):
+    """
+    Diagnose Me — Personal Health Intelligence.
+    Given user symptoms + district, cross-reference live outbreak signals
+    and return ranked list of diseases the user may have, with probability
+    scores grounded in real WHO/ProMED/GDELT/NCVBDC data.
+    """
+    # Normalize symptoms using existing AI engine
+    normalized = symptom_extractor.normalize(report.symptoms, report.free_text or "")
+    if not normalized:
+        raise HTTPException(
+            status_code=422,
+            detail="Please provide at least one symptom to diagnose."
+        )
+
+    result = diagnosis_engine.diagnose(
+        user_symptoms=normalized,
+        district=report.district,
+    )
+    return result
 
 
 def _status_label(conf: float) -> str:
