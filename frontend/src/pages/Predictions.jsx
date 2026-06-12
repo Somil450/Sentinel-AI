@@ -149,7 +149,7 @@ export default function Predictions() {
           </div>
 
           {/* Prediction cards */}
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div className="custom-scrollbar" style={{ display: 'grid', gap: 12, maxHeight: '550px', overflowY: 'auto', paddingRight: '6px' }}>
             {filtered.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text3)', fontSize: 13 }}>
                 No zones with {filter} risk level.

@@ -91,7 +91,7 @@ export default function Intelligence() {
                 </div>
 
                 {/* Keyword bars */}
-                <div style={{ display: 'grid', gap: 10 }}>
+                <div className="custom-scrollbar" style={{ display: 'grid', gap: 10, maxHeight: '280px', overflowY: 'auto', paddingRight: '8px' }}>
                   {keyList.map(([kw, score]) => {
                     const color = KEYWORD_COLORS[kw] || '#8899aa'
                     return (
@@ -155,7 +155,7 @@ export default function Intelligence() {
                   No active outbreaks in IDSP records
                 </div>
               ) : (
-                <div style={{ display: 'grid', gap: 8 }}>
+                <div className="custom-scrollbar" style={{ display: 'grid', gap: 8, maxHeight: '250px', overflowY: 'auto', paddingRight: '8px' }}>
                   {outbreaks.map((r, i) => {
                     const m = ALERT_META[r.alert_level]
                     return (
@@ -181,9 +181,9 @@ export default function Intelligence() {
 
           {/* Full IDSP table */}
           <Card title="Complete IDSP Record" icon="ti-table" iconColor="var(--blue)">
-            <div style={{ overflowX: 'auto' }}>
+            <div className="custom-scrollbar" style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                <thead>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
                   <tr style={{ background: 'var(--navy3)' }}>
                     {['Wk', 'District', 'Disease', 'Suspected', 'Confirmed', 'Deaths', 'Level'].map(h => (
                       <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text3)', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: '.5px', borderBottom: '1px solid var(--border)' }}>
