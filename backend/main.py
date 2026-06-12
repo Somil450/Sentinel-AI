@@ -19,6 +19,7 @@ from ai_engine import symptom_extractor, confidence_engine
 from trends_fetcher import get_trends_score, get_trends_raw
 from idsp_loader import get_idsp_summary, get_district_idsp, get_anchor_score
 from prediction_engine import prediction_engine
+from real_data_fetcher import get_real_data_summary, fetch_all_real_data
 
 app = FastAPI(title="Sentinel AI API", version="2.0.0")
 
@@ -266,6 +267,33 @@ def get_ground_truth(district: Optional[str] = None):
         "source": "IDSP - Integrated Disease Surveillance Programme, India",
         "coverage": "Bhopal, Madhya Pradesh — Weeks 18–22, 2026",
     }
+
+
+@app.get("/api/sources")
+def get_data_sources():
+    """
+    Returns metadata about ALL real data sources powering Sentinel AI.
+    No fake data is used — everything is sourced from live public APIs.
+    """
+    return get_real_data_summary()
+
+
+@app.post("/api/refresh")
+def refresh_data():
+    """
+    Force-refreshes all real-world data from live sources.
+    Used for manual cache invalidation.
+    """
+    try:
+        new_reports = fetch_all_real_data(force=True)
+        # Clear old real-data reports, keep user reports
+        db._reports = [r for r in db._reports if r.get("anon_id", "").startswith("user-")]
+        for r in new_reports:
+            db.insert_report(r)
+        db._build_initial_signals()
+        return {"status": "ok", "new_reports": len(new_reports)}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
 
 
 def _status_label(conf: float) -> str:

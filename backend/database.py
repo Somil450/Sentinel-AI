@@ -2,10 +2,17 @@
 Sentinel AI — Database Layer
 In-memory store (swap out for PostgreSQL in production).
 Expanded to cover all major districts across India.
+
+All signal data is sourced from REAL epidemiological data:
+  - WHO Disease Outbreak News RSS
+  - ProMED Mail RSS
+  - disease.sh (COVID-19 India)
+  - NewsData.io health news
+  - GDELT Project health events
+  - NCVBDC / MoHFW dengue bulletins
 """
 
 import uuid
-import random
 from datetime import datetime, timezone
 from typing import List, Dict, Optional
 from collections import defaultdict
@@ -273,7 +280,30 @@ class SentinelDB:
         self._reports: List[Dict] = []
         self._signals: Dict[str, Dict] = {}   # hex_id -> signal record
         self._spam_blocked: int = 0
-        self._seed_demo_data()
+        self._real_data_loaded = False
+        self._load_real_data()
+
+    def _load_real_data(self):
+        """Load REAL outbreak data from live public APIs. No fake data."""
+        try:
+            from real_data_fetcher import fetch_all_real_data
+            real_reports = fetch_all_real_data()
+            for r in real_reports:
+                self.insert_report(r)
+            self._real_data_loaded = True
+            print(f"[SentinelDB] Loaded {len(real_reports)} REAL outbreak reports from live sources.")
+        except Exception as e:
+            print(f"[SentinelDB] WARNING: Could not load real data: {e}")
+            self._real_data_loaded = False
+
+        self._build_initial_signals()
+
+    def refresh_real_data(self):
+        """Refresh real data (call periodically e.g. every 30 minutes)."""
+        self._reports = [r for r in self._reports if r.get('source') != 'user']  # keep user reports
+        # remove old real-data reports, refetch
+        self._reports = [r for r in self._reports if r.get('anon_id', '').startswith('user-')]
+        self._load_real_data()
 
     # ── REPORTS ────────────────────────────────────────────────────────────
 
@@ -389,115 +419,8 @@ class SentinelDB:
             })
         return frames
 
-    # ── SEEDING ────────────────────────────────────────────────────────────
 
-    def _seed_demo_data(self):
-        """Seed realistic all-India outbreak data."""
-        random.seed(42)
-        all_districts = list(DISTRICT_COORDS.keys())
-        now_iso = datetime.now(timezone.utc).isoformat()
-
-        respiratory_symptoms = [
-            ["cough", "fever"], ["fever", "fatigue"], ["cough", "sore throat"],
-            ["loss of smell", "fatigue"], ["shortness of breath", "cough"],
-            ["fever", "body ache"], ["cough", "headache", "fever"],
-            ["loss of smell", "cough"], ["fatigue", "sore throat", "fever"],
-        ]
-        gi_symptoms = [
-            ["nausea", "fatigue"], ["headache", "nausea"], ["fatigue", "body ache"],
-            ["nausea", "diarrhea"], ["stomach pain", "nausea"],
-        ]
-
-        # ── HOTSPOT CLUSTERS (major outbreaks in specific cities) ──────────
-        # Simulate realistic outbreak clusters in major metros and smaller cities
-        hotspot_districts = {
-            # High confidence respiratory clusters
-            "Mumbai":               (180, respiratory_symptoms),
-            "Delhi (NCT)":          (0, []),  # placeholder — use individual zones
-            "New Delhi":            (120, respiratory_symptoms),
-            "South Delhi":          (90, respiratory_symptoms),
-            "Kolkata":              (110, respiratory_symptoms),
-            "Chennai":              (95, respiratory_symptoms),
-            "Hyderabad":            (140, respiratory_symptoms),
-            "Bengaluru":            (130, respiratory_symptoms),
-            "Pune":                 (100, respiratory_symptoms),
-            "Ahmedabad":            (85, respiratory_symptoms),
-            "Lucknow":              (75, respiratory_symptoms),
-            "Patna":                (70, respiratory_symptoms),
-            "Guwahati":             (60, respiratory_symptoms),
-            "Bhopal":               (80, respiratory_symptoms),
-            "Indore":               (65, respiratory_symptoms),
-            "Srinagar":             (50, respiratory_symptoms),
-            "Imphal":               (45, respiratory_symptoms),
-            # GI clusters
-            "Thiruvananthapuram":   (55, gi_symptoms),
-            "Kochi":                (48, gi_symptoms),
-            "Visakhapatnam":        (42, gi_symptoms),
-        }
-
-        for district, (count, syms) in hotspot_districts.items():
-            if count == 0 or not syms:
-                continue
-            for _ in range(count):
-                self.insert_report({
-                    "anon_id": uuid.uuid4().hex[:8].upper(),
-                    "district": district,
-                    "symptoms": random.choice(syms),
-                    "free_text": "",
-                    "timestamp": now_iso,
-                    "is_spam": False,
-                })
-
-        # ── MEDIUM SIGNALS across tier-2 cities ───────────────────────────
-        tier2 = [
-            "Nagpur", "Surat", "Jaipur", "Kanpur", "Agra", "Varanasi",
-            "Ranchi", "Bhubaneswar", "Coimbatore", "Madurai", "Warangal",
-            "Amritsar", "Ludhiana", "Dehradun", "Raipur", "Gwalior",
-            "Jodhpur", "Udaipur", "Jalandhar", "Mysuru", "Mangaluru",
-            "Siliguri", "Asansol", "Durgapur", "Howrah",
-        ]
-        for d in tier2:
-            for _ in range(random.randint(20, 60)):
-                self.insert_report({
-                    "anon_id": uuid.uuid4().hex[:8].upper(),
-                    "district": d,
-                    "symptoms": random.choice(respiratory_symptoms),
-                    "free_text": "",
-                    "timestamp": now_iso,
-                    "is_spam": False,
-                })
-
-        # ── BACKGROUND NOISE across remaining districts ────────────────────
-        for d in all_districts:
-            if d not in hotspot_districts and d not in tier2:
-                for _ in range(random.randint(3, 18)):
-                    self.insert_report({
-                        "anon_id": uuid.uuid4().hex[:8].upper(),
-                        "district": d,
-                        "symptoms": random.choice(gi_symptoms + respiratory_symptoms),
-                        "free_text": "",
-                        "timestamp": now_iso,
-                        "is_spam": False,
-                    })
-
-        # ── SPAM (nationwide) ──────────────────────────────────────────────
-        self._spam_blocked = 4200
-        spam_district = "Mumbai"
-        base_lat, base_lng = DISTRICT_COORDS[spam_district]
-        h = h3.geo_to_h3(base_lat, base_lng, H3_RESOLUTION)
-        for i in range(300):
-            self._reports.append({
-                "anon_id": "SPAM" + str(i),
-                "district": spam_district,
-                "hex_id": h,
-                "lat": base_lat, "lng": base_lng,
-                "symptoms": ["cough", "fever"],
-                "free_text": "spam",
-                "timestamp": now_iso,
-                "is_spam": True,
-            })
-
-        self._build_initial_signals()
+    # ── REAL DATA REFRESH ──────────────────────────────────────────────────
 
     def _build_initial_signals(self):
         from ai_engine import confidence_engine
@@ -508,3 +431,4 @@ class SentinelDB:
 
 # Singleton
 db = SentinelDB()
+
