@@ -1,23 +1,13 @@
 import sys
 import os
 
-# Add the backend directory to the path so it can be imported
-# Vercel serverless functions run from the project root
-_here = os.path.dirname(__file__)
-_backend = os.path.join(_here, '..', '..', 'backend')
-_backend_abs = os.path.abspath(_backend)
-if _backend_abs not in sys.path:
-    sys.path.insert(0, _backend_abs)
+# The backend Python files are deployed alongside this file in the api/backend/ directory.
+# Vercel serverless functions can only access files within the project's deployed tree.
+_here = os.path.dirname(os.path.abspath(__file__))
+_backend = os.path.join(_here, "backend")
 
-# Also try relative paths used in different deployment contexts
-for candidate in [
-    os.path.join(_here, 'backend'),
-    os.path.join(_here, '..', 'backend'),
-    '/var/task/backend',
-]:
-    cand_abs = os.path.abspath(candidate)
-    if os.path.exists(cand_abs) and cand_abs not in sys.path:
-        sys.path.insert(0, cand_abs)
+if _backend not in sys.path:
+    sys.path.insert(0, _backend)
 
-# Export the FastAPI app so Vercel can find it
+# Export the FastAPI app for Vercel
 from main import app  # type: ignore  # noqa: E402
