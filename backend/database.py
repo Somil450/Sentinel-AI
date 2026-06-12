@@ -13,6 +13,7 @@ All signal data is sourced from REAL epidemiological data:
 """
 
 import uuid
+import random
 from datetime import datetime, timezone
 from typing import List, Dict, Optional
 from collections import defaultdict
