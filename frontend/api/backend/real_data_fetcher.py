@@ -195,20 +195,24 @@ def _make_report(district: str, symptoms: List[str], source_tag: str, note: str 
 
 # ── SOURCE 1: WHO Disease Outbreak News RSS ──────────────────────────────────
 
-WHO_RSS = "https://www.who.int/rss-feeds/news.xml"
-WHO_DON_RSS = "https://www.who.int/rss-feeds/don.xml"
+# WHO has multiple RSS endpoints - try all
+WHO_RSS_URLS = [
+    "https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml",
+    "https://www.who.int/rss-feeds/news.xml",
+    "https://www.who.int/rss-feeds/don.xml",
+    "https://www.who.int/feeds/entity/csr/don/en/rss.xml",
+]
 
 def fetch_who_outbreaks() -> List[Dict]:
     """Parse WHO Disease Outbreak News RSS for India-related alerts."""
     reports = []
-    for url in [WHO_DON_RSS, WHO_RSS]:
+    for url in WHO_RSS_URLS:
         data = _http_get(url)
         if not data:
             continue
         try:
             root = ET.fromstring(data)
             ns = {"atom": "http://www.w3.org/2005/Atom"}
-            # Try Atom format first
             entries = root.findall(".//atom:entry", ns) or root.findall(".//item")
             if not entries:
                 entries = root.findall(".//item")
@@ -216,52 +220,58 @@ def fetch_who_outbreaks() -> List[Dict]:
             for item in entries[:30]:
                 title_el = item.find("title") or item.find("{http://www.w3.org/2005/Atom}title")
                 desc_el  = item.find("description") or item.find("{http://www.w3.org/2005/Atom}summary")
-                title = title_el.text or "" if title_el is not None else ""
-                desc  = desc_el.text or "" if desc_el is not None else ""
+                title = (title_el.text or "") if title_el is not None else ""
+                desc  = (desc_el.text or "") if desc_el is not None else ""
                 full  = f"{title} {desc}"
 
-                # Only India-related or global disease alerts
                 if "india" in full.lower() or any(d in full.lower() for d in ["dengue", "malaria", "cholera", "flu", "influenza", "covid"]):
                     district  = _extract_district(full)
                     symptoms  = _extract_symptoms(full)
                     if symptoms:
                         reports.append(_make_report(district, symptoms, "WHO", title))
 
+            if reports:
+                break  # Got data from this URL, stop trying
         except Exception as e:
-            print(f"[WHO] Parse error: {e}")
+            print(f"[WHO] Parse error on {url}: {e}")
     print(f"[WHO] Fetched {len(reports)} real WHO outbreak signals.")
     return reports
 
 
 # ── SOURCE 2: ProMED Mail RSS ─────────────────────────────────────────────────
 
-PROMED_RSS = "https://promedmail.org/feed/"
+# ProMED has changed their feed URL several times
+PROMED_RSS_URLS = [
+    "https://promedmail.org/feed/",
+    "https://www.promedmail.org/feed/",
+    "https://promedmail.org/rss2-0.xml",
+]
 
 def fetch_promed_alerts() -> List[Dict]:
     """Parse ProMED Mail RSS for India disease alerts."""
     reports = []
-    data = _http_get(PROMED_RSS, timeout=10)
-    if not data:
-        return reports
-    try:
-        root = ET.fromstring(data)
-        items = root.findall(".//item")
-        for item in items[:40]:
-            title_el = item.find("title")
-            desc_el  = item.find("description")
-            title = title_el.text or "" if title_el is not None else ""
-            desc  = desc_el.text or "" if desc_el is not None else ""
-            full  = f"{title} {desc}"
-
-            # ProMED uses "INDIA" in titles
-            if "india" in full.lower():
-                district = _extract_district(full)
-                symptoms = _extract_symptoms(full)
-                if symptoms:
-                    reports.append(_make_report(district, symptoms, "ProMED", title))
-
-    except Exception as e:
-        print(f"[ProMED] Parse error: {e}")
+    for rss_url in PROMED_RSS_URLS:
+        data = _http_get(rss_url, timeout=10)
+        if not data:
+            continue
+        try:
+            root = ET.fromstring(data)
+            items = root.findall(".//item")
+            for item in items[:40]:
+                title_el = item.find("title")
+                desc_el  = item.find("description")
+                title = (title_el.text or "") if title_el is not None else ""
+                desc  = (desc_el.text or "") if desc_el is not None else ""
+                full  = f"{title} {desc}"
+                if "india" in full.lower():
+                    district = _extract_district(full)
+                    symptoms = _extract_symptoms(full)
+                    if symptoms:
+                        reports.append(_make_report(district, symptoms, "ProMED", title))
+            if reports:
+                break
+        except Exception as e:
+            print(f"[ProMED] Parse error on {rss_url}: {e}")
     print(f"[ProMED] Fetched {len(reports)} real ProMED India alerts.")
     return reports
 
@@ -317,7 +327,7 @@ def fetch_covid_data() -> List[Dict]:
     data = _http_get(DISEASE_SH_COUNTRY)
     if data:
         try:
-            d = json.loads(data)
+            d = json.loads(data.decode("utf-8", errors="replace"))
             today_cases = d.get("todayCases", 0)
             today_deaths = d.get("todayDeaths", 0)
             active = d.get("active", 0)
@@ -353,7 +363,7 @@ def fetch_covid_data() -> List[Dict]:
     data2 = _http_get(DISEASE_SH_STATES)
     if data2:
         try:
-            states_data = json.loads(data2)
+            states_data = json.loads(data2.decode("utf-8", errors="replace"))
             if isinstance(states_data, dict):
                 for state, stats in states_data.items():
                     district = STATE_TO_DISTRICT.get(state)
@@ -513,9 +523,26 @@ _cache_time: Optional[datetime] = None
 CACHE_TTL_MINUTES = 30
 
 
+_SNAPSHOT_PATH = os.path.join(os.path.dirname(__file__), "data", "real_data_snapshot.json")
+
+def _load_snapshot() -> List[Dict]:
+    """Load pre-fetched snapshot from disk (used as fallback in Vercel serverless)."""
+    try:
+        if os.path.exists(_SNAPSHOT_PATH):
+            with open(_SNAPSHOT_PATH, "r", encoding="utf-8") as f:
+                snap = json.load(f)
+                reports = snap.get("reports", snap) if isinstance(snap, dict) else snap
+                print(f"[RealData] Loaded {len(reports)} reports from snapshot file.")
+                return reports
+    except Exception as e:
+        print(f"[RealData] Snapshot load error: {e}")
+    return []
+
+
 def fetch_all_real_data(force: bool = False) -> List[Dict]:
     """
     Fetch ALL real data sources and return combined report list.
+    Tries live APIs first; falls back to pre-built snapshot if all fail (Vercel serverless).
     Cached for 30 minutes to avoid hammering APIs.
     """
     global _cache, _cache_time
@@ -529,14 +556,46 @@ def fetch_all_real_data(force: bool = False) -> List[Dict]:
     all_reports: List[Dict] = []
 
     print("[RealData] Fetching fresh real-world outbreak data...")
-    all_reports += fetch_who_outbreaks()
-    all_reports += fetch_promed_alerts()
-    all_reports += fetch_covid_data()
-    all_reports += fetch_newsdata_health()
-    all_reports += fetch_gdelt_health_events()
-    all_reports += fetch_ncvbdc_dengue()
+    try:
+        all_reports += fetch_who_outbreaks()
+    except Exception as e:
+        print(f"[RealData] WHO fetch failed: {e}")
+    try:
+        all_reports += fetch_promed_alerts()
+    except Exception as e:
+        print(f"[RealData] ProMED fetch failed: {e}")
+    try:
+        all_reports += fetch_covid_data()
+    except Exception as e:
+        print(f"[RealData] disease.sh fetch failed: {e}")
+    try:
+        all_reports += fetch_newsdata_health()
+    except Exception as e:
+        print(f"[RealData] NewsData fetch failed: {e}")
+    try:
+        all_reports += fetch_gdelt_health_events()
+    except Exception as e:
+        print(f"[RealData] GDELT fetch failed: {e}")
+    try:
+        all_reports += fetch_ncvbdc_dengue()
+    except Exception as e:
+        print(f"[RealData] NCVBDC fetch failed: {e}")
 
-    print(f"[RealData] Total real reports fetched: {len(all_reports)}")
+    # If live fetch returned nothing, fall back to last known-good snapshot
+    if not all_reports:
+        print("[RealData] All live sources failed — loading from snapshot.")
+        all_reports = _load_snapshot()
+    else:
+        # Save fresh snapshot for next cold-start
+        try:
+            snap = {"reports": all_reports, "fetched_at": now.isoformat()}
+            os.makedirs(os.path.dirname(_SNAPSHOT_PATH), exist_ok=True)
+            with open(_SNAPSHOT_PATH, "w", encoding="utf-8") as f:
+                json.dump(snap, f, default=str)
+        except Exception as e:
+            print(f"[RealData] Could not save snapshot: {e}")
+
+    print(f"[RealData] Total real reports: {len(all_reports)}")
     _cache = all_reports
     _cache_time = now
     return all_reports
